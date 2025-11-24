@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编码探秘小侦探 - 教师端</title>
+    <style>
+        body { font-family: "Microsoft YaHei", Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .container { display: flex; gap: 20px; flex-wrap: wrap; }
+        .sidebar { flex: 1; min-width: 300px; background: #f8f9fa; border-radius: 8px; padding: 20px; }
+        .main-content { flex: 3; min-width: 600px; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; }
+        .student-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .student-item:hover { background: #e9ecef; }
+        .student-item.active { background: #e3f2fd; font-weight: bold; }
+        .medal { color: #f1c40f; margin-right: 5px; }
+        .stat-card { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .stat-value { font-size: 28px; font-weight: bold; color: #3498db; }
+        .activity-status { margin: 8px 0; }
+        .completed { color: #27ae60; }
+        .uncompleted { color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <h1>编码探秘小侦探 - 教师管理系统</h1>
+
+    <div class="container">
+        <!-- 左侧：学生列表 + 统计 -->
+        <div class="sidebar">
+            <div class="stat-card">
+                <h3>总学生数</h3>
+                <div class="stat-value" id="totalStudents">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>平均勋章数</h3>
+                <div class="stat-value" id="avgMedals">0</div>
+            </div>
+            <h2>学生列表</h2>
+            <div id="studentList">加载中学生数据...</div>
+        </div>
+
+        <!-- 右侧：学生详情 -->
+        <div class="main-content">
+            <h2 id="detailTitle">请选择学生查看详情</h2>
+            <div id="detailContent">
+                <p>选择学生后，将实时显示其活动完成情况和勋章获得情况</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入 Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+    <script>
+        // 替换为你的 Firebase 配置（和学生端完全一致！）
+        const firebaseConfig = {
+            <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyCRX5wRcB8OqEkCIUxVfdqC4F9K3tgLyOY",
+    authDomain: "teacher-1c88c.firebaseapp.com",
+    databaseURL: "https://teacher-1c88c-default-rtdb.firebaseio.com",
+    projectId: "teacher-1c88c",
+    storageBucket: "teacher-1c88c.firebasestorage.app",
+    messagingSenderId: "1005145815446",
+    appId: "1:1005145815446:web:a8be89b820afa81a0f85b7"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+</script>
+        };
+
+        // 初始化 Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        let students = [];
+
+        // 实时监听学生数据变化
+        db.ref("students").on("value", snapshot => {
+            const data = snapshot.val();
+            students = data ? Object.values(data) : [];
+            renderStudentList();
+            updateStats();
+            // 保持当前选中学生的详情
+            const activeStudent = document.querySelector(".student-item.active");
+            if (activeStudent && students.length > 0) {
+                const activeName = activeStudent.querySelector("span").textContent;
+                const student = students.find(s => s.name === activeName);
+                if (student) showStudentDetail(student);
+            }
+        });
+
+        // 渲染学生列表
+        function renderStudentList() {
+            const listElem = document.getElementById("studentList");
+            if (students.length === 0) {
+                listElem.textContent = "暂无学生数据";
+                return;
+            }
+            listElem.innerHTML = "";
+            students.forEach(student => {
+                const div = document.createElement("div");
+                div.className = "student-item";
+                div.innerHTML = `<span>${student.name}</span><span>勋章：${student.medals.length}个</span>`;
+                div.onclick = () => {
+                    document.querySelectorAll(".student-item").forEach(item => item.classList.remove("active"));
+                    div.classList.add("active");
+                    showStudentDetail(student);
+                };
+                listElem.appendChild(div);
+            });
+        }
+
+        // 显示学生详情
+        function showStudentDetail(student) {
+            document.getElementById("detailTitle").textContent = `学生详情：${student.name}`;
+            let detailHtml = `
+                <p><strong>最后更新：</strong>${student.lastUpdated}</p>
+                <p><strong>获得勋章：</strong>
+                    ${student.medals.map(m => `<span class="medal">🏅</span>活动${m}`).join(" ")}（共${student.medals.length}个）
+                </p>
+                <h3>活动完成情况：</h3>
+                <div class="activity-status">活动一：${student.activities[1] ? '<span class="completed">✅ 已完成</span>' : '<span class="uncompleted">❌ 未完成</span>'}</div>
+                <div class="activity-status">活动二：${student.activities[2] ? '<span class="completed">✅ 已完成</span>' : '<span class="uncompleted">❌ 未完成</span>'}</div>
+                <div class="activity-status">活动三：${student.activities[3] ? '<span class="completed">✅ 已完成</span>' : '<span class="uncompleted">❌ 未完成</span>'}</div>
+                <div class="activity-status">活动四：${student.activities[4] ? '<span class="completed">✅ 已完成</span>' : '<span class="uncompleted">❌ 未完成</span>'}</div>
+                <div class="activity-status">活动五：${student.activities[5] ? '<span class="completed">✅ 已完成</span>' : '<span class="uncompleted">❌ 未完成</span>'}</div>
+            `;
+            document.getElementById("detailContent").innerHTML = detailHtml;
+        }
+
+        // 更新班级统计
+        function updateStats() {
+            document.getElementById("totalStudents").textContent = students.length;
+            if (students.length === 0) {
+                document.getElementById("avgMedals").textContent = "0";
+                return;
+            }
+            const totalMedals = students.reduce((sum, s) => sum + s.medals.length, 0);
+            document.getElementById("avgMedals").textContent = (totalMedals / students.length).toFixed(1);
+        }
+    </script>
+</body>
+</html>
